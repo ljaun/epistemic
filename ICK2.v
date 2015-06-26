@@ -1,3 +1,5 @@
+Section ICK.
+
 Set Implicit Arguments.
 Require Import Unicode.Utf8.
 Require Import Utf8_core.
@@ -7,21 +9,23 @@ Require Import Coq.Sets.Ensembles.
 Require Import Coq.Sets.Finite_sets.
 Require Import Coq.Sets.Powerset_facts.
 Require Import Coq.Sets.Constructive_sets.
+Require Import EnsembleFacts.
+
 
 (*
  This is how we say  " { (f a) | a in x } "
  Taken from http://www.alumnos.unican.es/ccc66/coq/EnsembleFacts.v
-*)
-(***********************)
+
 Inductive apply_func (U1 U2:Type) (f:U1->U2) (S:Ensemble U1)
 : Ensemble U2 :=
 |In_apply_func: forall a:U1, In U1 S a->
   In U2 (apply_func f S) (f a).
-
+*)
+(***********************)
 
 Lemma apply_func_rec : forall (U1 U2:Type) (f:U1->U2)
 (S:Ensemble U1) (a:U2),
-In U2 (apply_func f S) a ->
+In U2 (apply_func U1 U2 f S) a ->
 exists ia:U1, In U1 S ia /\ f ia=a.
 intros.
 inversion H.
@@ -36,7 +40,7 @@ Qed.
 *)
 Theorem apply_func_empty : forall (U1 U2:Type) (f:U1->U2)
 (S:Ensemble U1),
- (apply_func f (Empty_set U1)) = Empty_set U2.
+ (apply_func U1 U2 f (Empty_set U1)) = Empty_set U2.
 Proof.
 intros.
 apply Extensionality_Ensembles.
@@ -77,7 +81,7 @@ Definition In_si (t : Term) : In Term (Si t) t := In_singleton Term t.
 Definition EmptyE : Ensemble Term := Empty_set Term.
 Definition Ut (u : Forms) (v : Forms) : Forms := Union Term u v.
 Definition Compt (x : Forms) (f : Term -> Term) : Forms :=
-  apply_func f x.
+  apply_func Term Term f x.
 Notation "a ∈ X" := (In Term X a) (at level 19).
 Notation "A ∪ B" := (Ut A B) (at level 17, left associativity).
 Notation "⊥" := bottom.
@@ -234,6 +238,89 @@ intros.
 rewrite -> p .
 reflexivity.
 Defined.
+
+
+Require Export EnsembleFacts.
+Check apply_func.
+
+Theorem apply_func_union_singletons : forall (U1 U2:Type)
+(f:U1->U2) (a b: U1), 
+ (apply_func U1 U2 f (Union U1 (Singleton U1 a) (Singleton U1 b)))
+  = Union U2
+     (apply_func U1 U2 f (Singleton U1 a)) (apply_func U1 U2 f (Singleton U1 b)).
+Proof.
+intros U1 U2 f a b.
+apply Extensionality_Ensembles.
+unfold Same_set.
+split.
+unfold Included.
+intros.
+inversion H.
+inversion H0.
+
+rewrite -> (apply_func_singleton U1 U2 f b).
+rewrite -> (apply_func_singleton U1 U2 f a).
+inversion H2.
+apply Union_introl.
+auto with sets.
+rewrite -> (apply_func_singleton U1 U2 f a).
+rewrite -> (apply_func_singleton U1 U2 f b).
+inversion H2.
+apply Union_intror.
+auto with sets.
+
+unfold Included.
+intros.
+inversion H.
+inversion H0.
+inversion H2.
+apply In_apply_func.
+apply Union_introl.
+exact (In_singleton U1 a0).
+inversion H0.
+inversion H2.
+apply In_apply_func.
+apply Union_intror.
+exact (In_singleton U1 a0).
+Defined.
+
+Lemma simplify_stuff : (forall i a b,(({{(Ut (Si a) (Si (impl a b))) | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE)) = (Si (k i a) ∪ Si (k i (impl a b)))).
+Proof.
+intros.
+unfold Compt.
+rewrite (apply_func_union_singletons  (λ x : Term, k i x)).
+apply Extensionality_Ensembles.
+unfold Same_set.
+split.
+unfold Included.
+intros.
+unfold Si.
+unfold "∪".
+(* simplify H *)
+unfold "∪" in H.
+unfold EmptyE in H.
+rewrite apply_func_empty in H.
+rewrite em in H.
+rewrite (apply_func_singleton ) in H. 
+rewrite (apply_func_singleton ) in H.
+rewrite (Union_commutative Term) in H.
+rewrite (em (Union Term (Singleton Term (k i a))
+           (Singleton Term (k i (impl a b))))) in H.
+(* --- *)
+assumption.
+exact (Si bottom).
+unfold Included.
+intros.
+unfold "∪".
+unfold EmptyE.
+rewrite apply_func_singleton. rewrite apply_func_singleton. rewrite apply_func_empty.
+rewrite em.
+auto with sets.
+exact (Si bottom).
+Defined.
+
+
+
 (*
 Lemma bla : forall (A : Type) (e : A) (f : A -> A) (a : Ensemble A),
   (apply_func f (Singleton A e)) = (Singleton A (f e)).
@@ -265,31 +352,25 @@ Lemma two : forall (i : nat) (a b : Term),
   (Ut (Si (k i a)) (Si (k i (impl a b)))) ⊃ (k i b).
 Proof.
 intros.
-Check KiS.
-Goal forall i a b,(({{(Ut (Si a) (Si (impl a b))) | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE)) = (Si (k i a) ∪ Si (k i (impl a b))).
-Proof.
-intros.
-rewrite (Union_commutative Term).
-unfold Compt.
-rewrite apply_func_empty.
-specialize (em).
-intros.
-unfold EmptyE.
 unfold "∪".
-rewrite -> (H Term (Empty_set Term)).
-unfold Si.
-rewrite em.
-
-
-eapply (KiS i EmptyE).
-apply (ki i b ((Si a) Si (impl a b)) EmptyE EmptyE ).
+Check simplify_stuff.
+rewrite <- simplify_stuff.
+apply KiS.
 unfold Compt.
 rewrite apply_func_empty.
-rewrite (Union_commutative Term).
-rewrite (em Term).
-apply (ImplL a b b (Si a)).
-apply triv.
-apply (Axi b (Si a |_| Si b)).
+assert ((Si a ∪ Si (impl a b) ∪ Empty_set Term) = (Si a ∪ Si (impl a b))).
+  unfold "∪".
+  unfold Si.
+  rewrite Union_commutative.
+  rewrite em.
+  reflexivity.
+rewrite H.
+apply ImplLS.
+apply AxiS.
+auto with *.
+apply AxiS.
+unfold "∪".
+auto with *.
 exact (Si bottom).
 Defined.
 
@@ -332,12 +413,35 @@ absurd (In A (Empty_set A) x0).
 *)
 
 
+Lemma simplify_stuff_three : forall i, ({{EmptyE | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE) = EmptyE.
+Proof.
+unfold Compt. unfold "∪". unfold EmptyE.
+intros.
+rewrite apply_func_empty. rewrite apply_func_empty. 
+rewrite em. rewrite em. 
+reflexivity.
+exact (Si bottom). exact (Si bottom).
+Defined.
+
 Lemma three : forall (i : nat) (a : Term), 
   (EmptyE ⊃ a) -> (EmptyE ⊃ (and (k i a) (c a))).
 Proof.
 intros.
-apply (AndR).
-apply (Ki i a EmptyE EmptyE EmptyE).
+apply (AndRS).
+Check KiS.
+rewrite <- (simplify_stuff_three i).
+apply (KiS i).
+unfold Compt. unfold "∪". unfold EmptyE.
+rewrite apply_func_empty. 
+assert (Union Term (Empty_set Term) (Empty_set Term) = (Empty_set Term)).
+auto with sets.
+rewrite H0.
+apply H.
+exact (Si bottom).
+apply (CLS EmptyE ).
+
+
+rewrite (bla EmptySet Term)
 unfold Compt.
 rewrite (apply_func_empty).
 rewrite (em Term).
