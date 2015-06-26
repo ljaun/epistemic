@@ -78,18 +78,36 @@ Definition EmptyE : Ensemble Term := Empty_set Term.
 Definition Ut (u : Forms) (v : Forms) : Forms := Union Term u v.
 Definition Compt (x : Forms) (f : Term -> Term) : Forms :=
   apply_func f x.
-Notation "a ∈ X" := (In Term X a) (at level 17).
-Notation "A ∪ B" := (Ut A B) (at level 19, left associativity).
+Notation "a ∈ X" := (In Term X a) (at level 19).
+Notation "A ∪ B" := (Ut A B) (at level 17, left associativity).
 Notation "⊥" := bottom.
+Notation "{{ A | F }}" := (Compt A F) (at level 18).
 
-Reserved Notation "A ?⊃ B" (at level 18).
+Reserved Notation "A ⊃ B" (at level 16).
 Inductive S : Forms -> Term -> Prop :=
-| AxbS :  ∀ Γ a, (a ∈ Γ) → (Γ ?⊃ a)
-| AxiS :  ∀ Γ a, (⊥ ∈ Γ) → (Γ ?⊃ a)
-| EFixS : ∀ i Γ a, (Γ ∪ (Si (e a))) ?⊃ (k i a)
-| CutS :  ∀ Γ a b,  (Γ ?⊃ a) → ((Γ ∪ (Si a)) ?⊃ b) → (Γ ?⊃ b)
-| OrLS :  ∀ Γ a b c,  ((Γ ∪ (Si a))  ?⊃ c) → ((Γ ∪ (Si b))  ?⊃ c) → ((Γ ∪ (Si (or a b)))  ?⊃ c)
-where "A ?⊃ B" := (S A B).
+| AxiS :  ∀ Γ a,      (a ∈ Γ) → (Γ ⊃ a)
+| AxbS :  ∀ Γ a,      (⊥ ∈ Γ) → (Γ ⊃ a)
+| EFixS : ∀ i Γ a,    (Γ ∪ (Si (e a))) ⊃ (k i a)
+| CutS :  ∀ Γ a b,    (Γ ⊃ a) → ((Γ ∪ (Si a)) ⊃ b) → (Γ ⊃ b)
+| OrLS :  ∀ Γ a b c,  ((Γ ∪ (Si a))  ⊃ c) → ((Γ ∪ (Si b))  ⊃ c) → ((Γ ∪ (Si (or a b)))  ⊃ c)
+| OrR1S : ∀ Γ a b  ,  (Γ ⊃ a) → (Γ ⊃ (or a b))
+| OrR2S : ∀ Γ a b  ,  (Γ ⊃ a) → (Γ ⊃ (or b a))
+| AndLS : ∀ Γ a b c,  (((Γ ∪ (Si a)) ∪ (Si b)) ⊃ c) → ((Γ ∪ (Si (and a b)))  ⊃ c)
+| AndRS : ∀ Γ a b  ,  (Γ ⊃ a) → (Γ ⊃ b) → (Γ ⊃ (and a b))
+| ImplLS: ∀ Γ a b c,  (Γ ⊃ a) → ((Γ ∪ (Si b)) ⊃ c) → ((Γ ∪ (Si (impl a b))) ⊃ c)
+| ImplRS: ∀ Γ a b  ,  ((Γ ∪ (Si a)) ⊃ b) → (Γ ⊃ (impl a b))
+| KiS   : ∀ i Γ Δ Θ a,(( Γ ∪ {{ Δ | (fun x => c x) }}) ⊃ a) → 
+   (( {{ Γ | (fun x => k i x) }} ∪ ({{ Δ | (fun x => c x) }} ∪ Θ)) ⊃ (k i a))
+| CLS :   ∀ Γ a b  ,  (( Γ ∪ (Si (e a))) ⊃ b ) → ((Γ ∪ (Si (c a))) ⊃ b)
+| CRS   : ∀ Γ Θ a  ,  ( {{ Γ | (fun x => c x) }} ⊃ (e a)) → (( {{ Γ | (fun x => c x) }} ∪ Θ) ⊃ (c a))
+| IndS :  ∀ Γ Θ a b,  ((Ut (Compt Γ (fun x => c x)) (Si b)) ⊃ (e a)) →
+    ( ({{ Γ | (fun x => c x)}}) ∪ (Si b)) ⊃ (e b) →
+    (((( {{ Γ | (fun x => c x) }}) ∪ Θ) ∪ (Si b)) ⊃ (c a))
+where "A ⊃ B" := (S A B).
+
+
+
+(*
 (*
   The most important definition:   The Phi  ⊃  t 
 *)
@@ -194,13 +212,49 @@ Inductive Ind (a b : Term) (x y : Forms)
     ((Ut (Ut (Compt x (fun x => c x)) y) (Si b)) ⊃ (c a)) :=
 IndE : Ind a b x y u v.
 
+*)
 
+Lemma triv : forall (a : Term), (Si a) ⊃ a.
+intros.
+apply AxiS.
+unfold Si. 
+auto with sets.
+Defined.
 
 Lemma em : forall (A : Type) (e : Ensemble A), Union A (Empty_set A) e = e.
 Proof.
 intros.
 auto with sets.
 Defined.
+
+
+Lemma bla : forall (a : Term) (Γ Δ : Forms) (p : Γ = Δ),
+(Γ ⊃ a) = (Δ ⊃ a).
+intros.
+rewrite -> p .
+reflexivity.
+Defined.
+(*
+Lemma bla : forall (A : Type) (e : A) (f : A -> A) (a : Ensemble A),
+  (apply_func f (Singleton A e)) = (Singleton A (f e)).
+Proof.
+intros.
+Check (apply_func_rec).
+apply Extensionality_Ensembles.
+unfold Same_set.
+split.
+
+unfold Included.
+
+intros.
+Check (apply_func_rec).
+(*Goal 
+eapply (apply_func_rec )).
+eauto with sets.*)
+Check (apply_func_rec (H /\ (f e0) = (f e0))).
+Check (apply_func_rec (apply_func f (Singleton A e0) /\ (f e0) = (f e0))).
+intros.
+*)
 
 Lemma one : forall (a : Term), (Si a) ⊃ a.
 Proof.
@@ -211,7 +265,24 @@ Lemma two : forall (i : nat) (a b : Term),
   (Ut (Si (k i a)) (Si (k i (impl a b)))) ⊃ (k i b).
 Proof.
 intros.
-apply (Ki i b ((Si a) |_| Si (impl a b)) EmptyE EmptyE ).
+Check KiS.
+Goal forall i a b,(({{(Ut (Si a) (Si (impl a b))) | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE)) = (Si (k i a) ∪ Si (k i (impl a b))).
+Proof.
+intros.
+rewrite (Union_commutative Term).
+unfold Compt.
+rewrite apply_func_empty.
+specialize (em).
+intros.
+unfold EmptyE.
+unfold "∪".
+rewrite -> (H Term (Empty_set Term)).
+unfold Si.
+rewrite em.
+
+
+eapply (KiS i EmptyE).
+apply (ki i b ((Si a) Si (impl a b)) EmptyE EmptyE ).
 unfold Compt.
 rewrite apply_func_empty.
 rewrite (Union_commutative Term).
