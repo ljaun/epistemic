@@ -37,8 +37,8 @@ Qed.
 
 (*
   f({}) = {} (Empty sets remain empty when we map them.)
-*)
-Theorem apply_func_empty : forall (U1 U2:Type) (f:U1->U2)
+
+Theorem  : forall (U1 U2:Type) (f:U1->U2)
 (S:Ensemble U1),
  (apply_func U1 U2 f (Empty_set U1)) = Empty_set U2.
 Proof.
@@ -54,7 +54,7 @@ unfold Included.
 intros.
 inversion H.
 Qed.
-
+*)
 (***********************)
 
 (*
@@ -92,6 +92,8 @@ Inductive S : Forms -> Term -> Prop :=
 | AxiS :  ∀ Γ a,      (a ∈ Γ) → (Γ ⊃ a)
 | AxbS :  ∀ Γ a,      (⊥ ∈ Γ) → (Γ ⊃ a)
 | EFixS : ∀ i Γ a,    (Γ ∪ (Si (e a))) ⊃ (k i a)
+| EFixRS: ∀ Γ a,      (forall i, Γ ⊃ k i a) → (Γ ⊃ e a)
+| EFixLS: ∀ Γ a b,    (forall i, (Γ ∪ (Si (k i a))) ⊃ b) → ((Γ ∪ (Si (e a))) ⊃ b)
 | CutS :  ∀ Γ a b,    (Γ ⊃ a) → ((Γ ∪ (Si a)) ⊃ b) → (Γ ⊃ b)
 | OrLS :  ∀ Γ a b c,  ((Γ ∪ (Si a))  ⊃ c) → ((Γ ∪ (Si b))  ⊃ c) → ((Γ ∪ (Si (or a b)))  ⊃ c)
 | OrR1S : ∀ Γ a b  ,  (Γ ⊃ a) → (Γ ⊃ (or a b))
@@ -110,125 +112,35 @@ Inductive S : Forms -> Term -> Prop :=
 where "A ⊃ B" := (S A B).
 
 
-
-(*
-(*
-  The most important definition:   The Phi  ⊃  t 
-*)
-Definition Ent (x : Forms) (y : Term) := Prop.
-
-
-Notation "A ⊃ B" := (Ent A B)  (at level 0, no associativity).
-Notation "A |_| B" := (Ut A B) (at level 50, left associativity).
-
-Inductive Axb (a : Term) (x : Forms) : ((Ut x (Si ⊥)) ⊃ a) :=
- AxbE : Axb a x.
-Inductive Axi (a : Term) (x : Forms) : ((Ut x (Si a)) ⊃ a) :=
- AxiE : Axi a x.
-Inductive EFix (i : nat) (a : Term) (x : Forms) : (Ut x (Si (e a))) ⊃ (k i a) :=
-EFixE : EFix i a x.
-Inductive EFixR (i : nat) (a : Term) (x : Forms) (v : (x ⊃ (e a))) :
-  (x ⊃ (k i a)) :=
-EFixRE : EFixR i v.
-Inductive EFixL (i : nat) (a b : Term) (x : Forms) (v : (Ut x (Si (e a))) ⊃ b) :
-  ((Ut x (Si (k i a))) ⊃ b) :=
-EFixLE : EFixL i v.
-
-Inductive Cutt (a b : Term) (x : Forms) (u : (x ⊃ a)) (v : ((Ut x (Si a)) ⊃ b)) :
-   (x ⊃ b) :=
-CutE : Cutt u v.
-
-Inductive OrL (a b c : Term) (x : Forms) 
-  (u : (Ut x (Si a))  ⊃ c)  
-  (v : (Ut x (Si b))  ⊃ c) : ((Ut x (Si (or a b)))  ⊃ c) :=
-OrLE : OrL u v.
-
-
-Inductive OrR1 (a b : Term) (x : Forms) (u : (x ⊃ a)) : x ⊃ (or a b) :=
-OrR1E : OrR1 b u.
-
-Lemma triv : forall (a : Term), (Si a) ⊃ a.
-intros.
-exact (Axi a (Si a) ).
-Defined.
-Inductive OrR2 (a b : Term) (x : Forms) (u : (x ⊃ a)) : x ⊃ (or b a) :=
-OrR2E : OrR2 b u.
-
-
-
-Inductive AndL (a b c : Term) (x : Forms) (u : (Ut (Ut x (Si a)) (Si b))  ⊃ c) : 
-  (Ut x (Si (and a b)))  ⊃ c :=
-AndLE : AndL u.
-
-
-Lemma triv_orl2 : forall (a b : Term), (Si a) ⊃ (or a b).
-intros.
-apply OrR1.
-apply triv.
-Defined.
-
-Lemma xx : forall (a b c : Term), 
-  ((Ut (Si a) (Si b)) ⊃ c)
-  -> ((Si (and a b)) ⊃ c).
-intros.
-apply (AndL a b c0 (EmptyE) X).
-Defined.
-
-Inductive AndR (a b : Term) (x : Forms) 
-  (u : (x ⊃ a)) (v : (x ⊃ b)) : 
-    (x ⊃ (and a b)) :=
-AndRE : AndR a b x u v.
-
-
-Inductive ImplL (a b c : Term) (x : Forms) 
-  (u : (x ⊃ a)) 
-  (v : ((Ut x (Si b)) ⊃ c)) : 
-    (Ut x (Si (impl a b))) ⊃ c :=
-ImplLE : ImplL a b c x u v.
-
-Inductive ImplR (a b : Term) (x : Forms) (u : (Ut x (Si a)) ⊃ b) : 
-  (x ⊃ (impl a b)) :=
-ImplRe : ImplR a b x u.
-
-
-(*
-  X,C(Y) ⊃ a
----------------------
-Ki(X),C(Y),Z ⊃ Ki(a)
-*)
-Inductive Ki (i : nat) (a : Term) (x y z : Forms) 
-  (u : ((Ut x (Compt y (fun x => c x))) ⊃ a)) :
-    (Ut (Ut (Compt x (fun x => k i x))
-     (Compt y (fun x => c x))) z) ⊃ (k i a) :=
-KiE : Ki i a x y z u.
-
-Inductive CL (a b : Term) (x : Forms) (u : ((Ut x (Si (e a))) ⊃ b )) :
-   ((Ut x (Si (c a))) ⊃ b) :=
-ClE : CL a b x u.
-
-Inductive CR (a : Term) (x y : Forms) (u : ((Compt x (fun x => c x)) ⊃ (e a))) :
-  (Ut (Compt x (fun x => c x)) y) ⊃ (c a) :=
-CLE : CR a x y u.
-
-Inductive Ind (a b : Term) (x y : Forms) 
-  (u : ((Ut (Compt x (fun x => c x)) (Si b)) ⊃ (e a)))
-  (v : ((Ut (Compt x (fun x => c x)) (Si b)) ⊃ (e b))) :
-    ((Ut (Ut (Compt x (fun x => c x)) y) (Si b)) ⊃ (c a)) :=
-IndE : Ind a b x y u v.
-
-*)
-
-Lemma triv : forall (a : Term), (Si a) ⊃ a.
-intros.
-apply AxiS.
-unfold Si. 
-auto with sets.
-Defined.
+Definition In_ut (a : Term) (x : Forms) : In Term (Ut x (Si a)) a := 
+  Union_intror Term x (Si a) a (In_si a).
 
 Lemma em : forall (A : Type) (e : Ensemble A), Union A (Empty_set A) e = e.
 Proof.
 intros.
 auto with sets.
+Defined.
+
+
+Ltac simpl_empty :=
+  intros;
+  unfold Compt; unfold "∪"; unfold EmptyE; unfold Si;
+  try rewrite apply_func_empty_simple;
+  try rewrite em; try rewrite em;
+  try reflexivity;
+  try   exact (Si bottom);
+  try   exact (Si bottom); auto with *.
+ 
+Ltac simpl_empty_in id :=
+  unfold Compt in id; unfold "∪" in id; unfold EmptyE in id; unfold Si in id;
+  try rewrite apply_func_empty_simple in id;
+  try rewrite em in id; try rewrite em in id.
+
+
+Lemma triv : forall (a : Term), (Si a) ⊃ a.
+intros.
+apply AxiS.
+simpl_empty.
 Defined.
 
 
@@ -299,7 +211,7 @@ unfold "∪".
 (* simplify H *)
 unfold "∪" in H.
 unfold EmptyE in H.
-rewrite apply_func_empty in H.
+rewrite apply_func_empty_simple in H.
 rewrite em in H.
 rewrite (apply_func_singleton ) in H. 
 rewrite (apply_func_singleton ) in H.
@@ -308,40 +220,12 @@ rewrite (em (Union Term (Singleton Term (k i a))
            (Singleton Term (k i (impl a b))))) in H.
 (* --- *)
 assumption.
-exact (Si bottom).
 unfold Included.
-intros.
-unfold "∪".
-unfold EmptyE.
-rewrite apply_func_singleton. rewrite apply_func_singleton. rewrite apply_func_empty.
-rewrite em.
+simpl_empty.
+rewrite apply_func_singleton. rewrite apply_func_singleton. 
 auto with sets.
-exact (Si bottom).
 Defined.
 
-
-
-(*
-Lemma bla : forall (A : Type) (e : A) (f : A -> A) (a : Ensemble A),
-  (apply_func f (Singleton A e)) = (Singleton A (f e)).
-Proof.
-intros.
-Check (apply_func_rec).
-apply Extensionality_Ensembles.
-unfold Same_set.
-split.
-
-unfold Included.
-
-intros.
-Check (apply_func_rec).
-(*Goal 
-eapply (apply_func_rec )).
-eauto with sets.*)
-Check (apply_func_rec (H /\ (f e0) = (f e0))).
-Check (apply_func_rec (apply_func f (Singleton A e0) /\ (f e0) = (f e0))).
-intros.
-*)
 
 Lemma one : forall (a : Term), (Si a) ⊃ a.
 Proof.
@@ -356,71 +240,31 @@ unfold "∪".
 Check simplify_stuff.
 rewrite <- simplify_stuff.
 apply KiS.
-unfold Compt.
-rewrite apply_func_empty.
-assert ((Si a ∪ Si (impl a b) ∪ Empty_set Term) = (Si a ∪ Si (impl a b))).
-  unfold "∪".
-  unfold Si.
+simpl_empty.
+assert ((Union Term (Union Term (Singleton Term a) (Singleton Term (impl a b)))
+  (Empty_set Term)) = (Si a ∪ Si (impl a b))).
+  simpl_empty.  
   rewrite Union_commutative.
-  rewrite em.
-  reflexivity.
-rewrite H.
+  simpl_empty.
+rewrite  H.
 apply ImplLS.
 apply AxiS.
 auto with *.
-apply AxiS.
-unfold "∪".
-auto with *.
-exact (Si bottom).
+apply AxiS.  
+simpl_empty.
 Defined.
 
 Check less_than_empty.
 Check Noone_in_empty.
 Check Union_commutative.
 Check Included_Empty.
-(*
-Lemma comp_empty : forall (A : Type) (f : A -> A),
-  (Compt (Empty_set A) f) = (Empty_set A).
-Proof.
-intros A f.
-Check Compt A (Empty_set A) f.
-Check (Included_Empty A (Comp A (Empty_set A) f)).
-apply (less_than_empty A (Comp A (Empty_set A) f)).
-unfold Comp.
-red in ⊃ *.
-intros.
-unfold Comp.
-destruct H .
-apply (Comp A (Empty_set A) f).
-exact (In_ A (Empty_set A) x0).
 
-Qed.
-
-(* unfold Same_set. *)
-unfold Included.
-
-intros.
-absurd (In A (Empty_set A) x0).
-apply ().
-
-revert H.
-unfold In.
-intros.
-destruct H.
-revert H.
-apply (fun x => absurd).
-absurd (In A (Empty_set A) x0).
-*)
 
 
 Lemma simplify_stuff_three : forall i, ({{EmptyE | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE) = EmptyE.
 Proof.
-unfold Compt. unfold "∪". unfold EmptyE.
-intros.
-rewrite apply_func_empty. rewrite apply_func_empty. 
-rewrite em. rewrite em. 
-reflexivity.
-exact (Si bottom). exact (Si bottom).
+simpl_empty.
+simpl_empty.
 Defined.
 
 Lemma three : forall (i : nat) (a : Term), 
@@ -431,70 +275,126 @@ apply (AndRS).
 Check KiS.
 rewrite <- (simplify_stuff_three i).
 apply (KiS i).
-unfold Compt. unfold "∪". unfold EmptyE.
-rewrite apply_func_empty. 
+simpl_empty.
 assert (Union Term (Empty_set Term) (Empty_set Term) = (Empty_set Term)).
-auto with sets.
-rewrite H0.
-apply H.
-exact (Si bottom).
-apply (CLS EmptyE ).
-
-
-rewrite (bla EmptySet Term)
-unfold Compt.
-rewrite (apply_func_empty).
-rewrite (em Term).
-assumption.
-exact (Si a).
-apply (CR a EmptyE EmptyE).
-unfold Compt.
-rewrite (apply_func_empty).
-apply ((EFixR i a EmptyE) X).
-exact (Si bottom).
+  auto with sets.
+assert ((({{EmptyE | λ x : Term, c x}}) ∪ EmptyE) = EmptyE).
+  simpl_empty.
+rewrite <- H1.
+apply CRS.
+simpl_empty.
+apply EFixRS.
+intros.
+assert (forall i, ({{EmptyE | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE) = Empty_set Term).
+  simpl_empty.
+  simpl_empty.
+rewrite <- (H2 i0).
+apply (KiS i0).
+simpl_empty. 
 Defined.
 
-Definition In_ut (a : Term) (x : Forms) : In Term (Ut x (Si a)) a := 
-  Union_intror Term x (Si a) a (In_si a).
 
-
+(*
 Lemma four : forall (a : Term), (Si (and (e a) (e (c a)))) ⊃ (c a).
 Proof.
 intros.
-Check (AndL).
-apply (AndL (e a) (e (c a)) (c a) EmptyE).
-rewrite (Union_commutative Term).
-rewrite (em Term).
-apply (CR a (Si (e a)) (Si (e (c a)))).
-unfold Compt.
-
-
-
-Check cut.
-apply (cut (and (k 0 a) bottom) a (Si (e a))).
-apply E_fix.
-exact 0. exact bottom. exact (Si bottom).
-apply (andl).
-apply axb.
-exact (In_ut bottom (Ut (Si (e a)) (Si (k 0 a)))).
-exact (Si bottom).
-apply axi.
-unfold Compt.
+Check (IndS).
+assert (forall b, (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE ∪ Si b) = Si b).
+  simpl_empty.
+rewrite <- H.  
+apply IndS.
+simpl_empty.
+apply EFixRS.
+intros.
+(* assert (forall a, ((EmptyE ∪ (Si (and (e a) (e (c a))))) ⊃ e a) = (Si (and (e a) (e (c a))) ⊃ e a)). *)
+assert (forall a, ((EmptyE ∪ (Si (and (e a) (e (c a))))) ⊃ k i a) = (Singleton Term (and (e a) (e (c a))) ⊃ k i a)).
+  simpl_empty.
+rewrite <- H0.
+apply AndLS.
+Check EFixS.
+assert ((EmptyE ∪ Si (e a) ∪ Si (e (c a))) = ( Si (e (c a)) ∪ Si (e a))).
+  simpl_empty.
+  rewrite Union_commutative.
+  reflexivity.
+rewrite -> H1.
+apply EFixS.
+simpl_empty.
+apply EFixRS.
+intros.
+Check KiS.
+assert ((Singleton Term (and (e a) (e (c a)))) = (EmptyE ∪ Si (and (e a) (e (c a))))).
+  simpl_empty.
+rewrite H0.
+apply AndLS.
+apply EFixLS.
+intros.
+assert ((({{Si ((c a)) | λ x : Term, k i0 x}}) ∪ (({{EmptyE | λ x : Term, c x}})
+  ∪ (Si (e a)))) 
+  = (EmptyE ∪ Si (e a) ∪ Si (k i0 (c a)))).
+  simpl_empty.
+  rewrite apply_func_singleton.
+  rewrite Union_commutative.  
+  simpl_empty.
+rewrite <- H1.
+apply (KiS i0).
+simpl_empty.
+simpl_empty.
+apply AxiS.
+simpl_empty.
 *)
 
 Lemma fife : forall (a : Term), (Si (c a)) ⊃ (and (e a) (c (e a))).
 Proof.
 intros.
-apply andr,  (ind (c a) (e a) EmptyE EmptyE).
-apply (cl a (e a) EmptyE).
-rewrite (em Term).
-apply axi. exact (In_si (e a)).
-unfold Compt.
-rewrite (apply_func_empty ).
-rewrite (em Term).
-Check ind.
-Check (ind 
-apply (ind a EmptyE (Si (e a))).
+apply AndRS.
+assert (forall a, (Si (c a)) = (EmptyE ∪ Si (c a))).
+  simpl_empty.
+rewrite -> H.
+apply CLS.
+apply AxiS.
+simpl_empty.
+assert (forall a, (Si (c a)) = (({{EmptyE  | λ x : Term, c x}}) ∪ EmptyE ∪ Si (c a))).
+  simpl_empty.
+rewrite -> H.
+apply IndS.
+simpl_empty.
+apply EFixRS.
+intro.
+assert (forall i, ((({{EmptyE | λ x : Term, k i x}})
+   ∪ (({{(Si a) | λ x : Term, c x}}) ∪ EmptyE)) = (Singleton Term (c a)))).
+  simpl_empty.
+  rewrite apply_func_singleton.
+  rewrite Union_commutative.
+  simpl_empty.
+rewrite <- (H0 i).
+apply KiS. 
+simpl_empty.    rewrite apply_func_singleton.
+2: simpl_empty.
+rewrite <- (H0 i).
+apply EFixRS.
+intros.
+simpl_empty.
+rewrite apply_func_singleton.
+rewrite Union_commutative.
+simpl_empty.
+assert (forall i, (({{EmptyE | λ x : Term, k i x}})
+   ∪ (({{(Si a) | λ x : Term, c x}}) ∪ EmptyE)) = (Singleton Term (c a))).
+  simpl_empty.
+  rewrite apply_func_singleton.
+  rewrite Union_commutative.
+  simpl_empty.
+rewrite <- (H1 i0).
+apply KiS.
+simpl_empty.
+rewrite apply_func_singleton.
+assert (forall a, (EmptyE ∪ Si (c a)) = Singleton Term (c a)).
+  simpl_empty.
+rewrite <- H2.
+apply CLS.
+apply EFixLS.
+intros.
+simpl_empty.
+apply IndS.
 rewrite (em Term).
 eauto with sets.
 *)

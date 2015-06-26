@@ -175,6 +175,22 @@ intros.
 inversion H.
 Qed.
 
+Theorem apply_func_empty_simple : forall (U1 U2:Type) (f:U1->U2) ,
+ (apply_func U1 U2 f (Empty_set U1)) = Empty_set U2.
+Proof.
+intros.
+apply Extensionality_Ensembles.
+unfold Same_set.
+split.
+unfold Included.
+intros.
+inversion H.
+inversion H0.
+unfold Included.
+intros.
+inversion H.
+Qed.
+
 Theorem apply_func_singleton : forall (U1 U2:Type) (f:U1->U2)
 (x:U1),
  (apply_func U1 U2 f (Singleton U1 x))
