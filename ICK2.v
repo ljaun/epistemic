@@ -71,6 +71,8 @@ Inductive Term : Set :=
   | or : Term → Term → Term.
 
 
+
+
 (* 
   Helper definition for sets of Terms.
 *)
@@ -88,7 +90,7 @@ Notation "⊥" := bottom.
 Notation "{{ A | F }}" := (Compt A F) (at level 18).
 
 Reserved Notation "A ⊃ B" (at level 16).
-Inductive S : Forms -> Term -> Prop :=
+Inductive S : Forms -> Term -> Type :=
 | AxiS :  ∀ Γ a,      (a ∈ Γ) → (Γ ⊃ a)
 | AxbS :  ∀ Γ a,      (⊥ ∈ Γ) → (Γ ⊃ a)
 | EFixS : ∀ i Γ a,    (Γ ∪ (Si (e a))) ⊃ (k i a)
@@ -110,6 +112,11 @@ Inductive S : Forms -> Term -> Prop :=
     ( ({{ Γ | (fun x => c x)}}) ∪ (Si b)) ⊃ (e b) →
     (((( {{ Γ | (fun x => c x) }}) ∪ Θ) ∪ (Si b)) ⊃ (c a))
 where "A ⊃ B" := (S A B).
+
+Definition ttt (Γ : Forms) (a : Term) (i : nat) : Type := (Γ ⊃ k i a).
+Goal forall i,ttt (Si bottom) (e bottom) i.
+intros.
+unfold ttt. unfold Si. apply AxbS. auto with sets. Defined.
 
 
 Definition In_ut (a : Term) (x : Forms) : In Term (Ut x (Si a)) a := 
@@ -280,7 +287,7 @@ assert (Union Term (Empty_set Term) (Empty_set Term) = (Empty_set Term)).
   auto with sets.
 assert ((({{EmptyE | λ x : Term, c x}}) ∪ EmptyE) = EmptyE).
   simpl_empty.
-rewrite <- H1.
+rewrite <- H0.
 apply CRS.
 simpl_empty.
 apply EFixRS.
@@ -288,12 +295,16 @@ intros.
 assert (forall i, ({{EmptyE | λ x : Term, k i x}}) ∪ (({{EmptyE | λ x : Term, c x}}) ∪ EmptyE) = Empty_set Term).
   simpl_empty.
   simpl_empty.
-rewrite <- (H2 i0).
+rewrite <- (H1 i0).
 apply (KiS i0).
 simpl_empty. 
 Defined.
+End ICK.
 
-
+Extraction Language Haskell.
+Extraction Language Ocaml.
+Set Extraction Optimize.
+Recursive Extraction three.
 (*
 Lemma four : forall (a : Term), (Si (and (e a) (e (c a)))) ⊃ (c a).
 Proof.
@@ -342,22 +353,27 @@ simpl_empty.
 apply AxiS.
 simpl_empty.
 *)
-
+(*
 Lemma fife : forall (a : Term), (Si (c a)) ⊃ (and (e a) (c (e a))).
 Proof.
 intros.
+(* AND right *)
 apply AndRS.
 assert (forall a, (Si (c a)) = (EmptyE ∪ Si (c a))).
   simpl_empty.
 rewrite -> H.
+(* C left *)
 apply CLS.
+(* ID Axiom *)
 apply AxiS.
 simpl_empty.
 assert (forall a, (Si (c a)) = (({{EmptyE  | λ x : Term, c x}}) ∪ EmptyE ∪ Si (c a))).
   simpl_empty.
 rewrite -> H.
+(* C Induction *)
 apply IndS.
 simpl_empty.
+(* E-Fix Right *)
 apply EFixRS.
 intro.
 assert (forall i, ((({{EmptyE | λ x : Term, k i x}})
@@ -367,10 +383,12 @@ assert (forall i, ((({{EmptyE | λ x : Term, k i x}})
   rewrite Union_commutative.
   simpl_empty.
 rewrite <- (H0 i).
+(* K rule *)
 apply KiS. 
 simpl_empty.    rewrite apply_func_singleton.
 2: simpl_empty.
 rewrite <- (H0 i).
+(* E-Fix Left *)
 apply EFixRS.
 intros.
 simpl_empty.
@@ -384,20 +402,81 @@ assert (forall i, (({{EmptyE | λ x : Term, k i x}})
   rewrite Union_commutative.
   simpl_empty.
 rewrite <- (H1 i0).
+(* K rule *)
 apply KiS.
 simpl_empty.
 rewrite apply_func_singleton.
 assert (forall a, (EmptyE ∪ Si (c a)) = Singleton Term (c a)).
   simpl_empty.
 rewrite <- H2.
+(* C Left *)
 apply CLS.
+(* E-Fix Left *)
 apply EFixLS.
 intros.
 simpl_empty.
+(* C Induction *)
 apply IndS.
 rewrite (em Term).
 eauto with sets.
 *)
+
+
+Lemma tlist_eq : forall (a b : Term), a ∈ Si b -> (Si a) = (Si b).
+intros.
+inversion H.
+reflexivity.
+Defined.
+
+
+Lemma six : forall (a b : Term), 
+  ((Si b) ⊃ (and (e a) (e (c b)))) -> ((Si b) ⊃ (c a)).
+Proof.
+intros x y H.
+Check IndS.
+assert ((({{EmptyE | λ x : Term, c x}}) ∪ EmptyE ∪ Si y) = (Si y)).
+simpl_empty.
+rewrite <- H0.
+apply IndS.
+assert ((({{EmptyE | λ x : Term, c x}}) ∪ Si y) = Si y).
+simpl_empty.
+rewrite H1.
+2:assert ((({{EmptyE | λ x : Term, c x}}) ∪ Si y) = Si y).
+2:simpl_empty.
+2: rewrite H1.
+Check AndRS.
+apply AndRS in H.
+
+
+apply Extensionality_Ensembles.
+unfold Same_set.
+split.
+unfold Included.
+intros.
+assert ( and (e x) (e (c x)) ∈ Si y).
+unfold Si.
+unfold Si in H.
+exact H2.
+
+
+Check AndRS.
+simpl_empty.
+assert (Included Term (EmptyE ∪ Si (and (e x) (e (c x)))) (Si y) = (and (e x) (e (c x)) ∈ Si y)).
+simpl_empty.
+rewrite H2.
+unfold Included.
+
+simpl_empty.
+
+apply AndLS.
+
+Check CRS.
+assert ((({{EmptyE | λ x : Term, c x}}) ∪ (Si b)) = Si b).
+simpl_empty.
+rewrite <- H0.
+apply CRS.
+inversion H.
+
 
 Lemma six : forall (a b : Term), 
   ((Si (c a)) ⊃ b) -> ((Si b) ⊃ (and (e a) (e b))).
